@@ -2,20 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Science Mission: Food Chain</title>
-    <!-- Load Tailwind CSS for modern UI styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Load Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background-color: #87CEEB; /* Sky blue */
-            font-family: 'Inter', sans-serif;
-            touch-action: none; /* Prevent default pull-to-refresh on mobile */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
         }
         #game-container {
             width: 100vw;
@@ -24,120 +19,181 @@
             top: 0;
             left: 0;
         }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #objective-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            width: 320px;
+            pointer-events: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 5px solid #4CAF50;
+        }
+        #interaction-prompt {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            text-align: center;
+            font-weight: bold;
+        }
+        .dialog-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            pointer-events: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            max-width: 80%;
+            min-width: 300px;
+        }
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #da190b;
+        }
+        #mobile-controls {
+            display: none;
+            pointer-events: auto;
+        }
+        /* Mobile Detection */
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                margin-bottom: 20px;
+            }
+            .d-pad, .action-btn {
+                background: rgba(255,255,255,0.7);
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                color: #333;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+        }
         #crosshair {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             background: rgba(255, 255, 255, 0.9);
-            border: 2px solid rgba(0, 0, 0, 0.5);
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 10;
+            border: 2px solid rgba(0,0,0,0.5);
         }
-        /* Virtual Joystick / D-Pad styles */
-        .mobile-btn {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(4px);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            transition: background 0.2s;
-        }
-        .mobile-btn:active {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        @media (min-width: 769px) {
-            #mobile-controls {
-                display: none !important;
-            }
+        
+        input[type="text"] {
+            padding: 10px;
+            width: 80%;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
         }
     </style>
+    <!-- Load Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-<body class="text-gray-800">
+<body>
 
-    <!-- 3D Canvas Container -->
     <div id="game-container"></div>
     
-    <!-- UI Layer -->
-    <div id="ui-layer" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 sm:p-6 z-20">
-        
-        <!-- Objective Panel -->
-        <div id="objective-panel" class="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-2xl w-full max-w-sm pointer-events-auto shadow-xl border border-white/40">
-            <h3 class="text-xl font-bold text-green-700 mb-2">Food Chain Mission</h3>
-            <p id="objective-text" class="text-sm font-medium mb-3">Level 1: Find an organism that can make its own food (Producer).</p>
-            <div class="bg-gray-100 p-3 rounded-lg flex justify-between items-center">
-                <span class="font-semibold text-gray-600">Score</span>
-                <span id="score-display" class="font-bold text-xl text-blue-600">0</span>
-            </div>
-            <p class="text-xs text-gray-500 mt-2 hidden sm:block">Use W, A, S, D to move and Mouse to look. Click canvas to lock mouse.</p>
+    <div id="ui-layer">
+        <div id="objective-panel">
+            <h3 style="margin-top:0; color:#333;">Food Chain Mission</h3>
+            <p id="objective-text"><strong>Level 1:</strong> Find an organism that can make its own food (Producer).</p>
+            <p><strong>Score:</strong> <span id="score-display">0</span></p>
         </div>
 
-        <!-- Crosshair -->
         <div id="crosshair"></div>
-
-        <!-- Interaction Prompt -->
-        <div id="interaction-prompt" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 mt-12 bg-black/70 text-white px-4 py-2 rounded-full hidden font-semibold shadow-lg text-sm sm:text-base">
-            Press 'E' or Tap Interact
-        </div>
-
-        <!-- Custom Notification Toast (Replaces alerts) -->
-        <div id="notification-toast" class="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white px-6 py-3 rounded-xl shadow-2xl transition-opacity duration-300 opacity-0 pointer-events-none border-l-4 border-blue-500">
-            <p id="notification-text" class="font-bold text-center"></p>
-        </div>
+        <div id="interaction-prompt">Press 'E' or Tap to Interact</div>
 
         <!-- Question Dialog -->
-        <div id="question-dialog" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 sm:p-8 rounded-2xl hidden pointer-events-auto shadow-2xl max-w-md w-full text-center border-t-8 border-green-500">
-            <h2 class="text-2xl font-bold mb-2">Object Found!</h2>
-            <p class="text-gray-600 mb-6">Is this green object a producer?</p>
-            <div class="flex flex-col gap-3">
-                <button onclick="checkAnswer(true)" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-xl transition duration-200">
-                    Yes, it makes its own food
-                </button>
-                <button onclick="checkAnswer(false)" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-xl transition duration-200">
-                    No, it eats other organisms
-                </button>
+        <div id="question-dialog" class="dialog-box">
+            <h2 id="q-title">Object Found!</h2>
+            <p id="q-text">Is this green object a producer?</p>
+            <div class="btn-container">
+                <button onclick="checkAnswer(true)">Yes, it makes its own food</button>
+                <button class="danger" onclick="checkAnswer(false)">No, it eats other organisms</button>
             </div>
         </div>
 
-        <!-- End Dialog & Google Sheets -->
-        <div id="end-dialog" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 sm:p-8 rounded-2xl hidden pointer-events-auto shadow-2xl max-w-md w-full text-center border-t-8 border-blue-500">
-            <h2 class="text-2xl font-bold mb-2">Mission Complete!</h2>
-            <p class="text-gray-600 mb-6">Congratulations! You have completed the basic level.</p>
-            <input type="text" id="playerName" placeholder="Please enter your name" class="w-full bg-gray-100 border border-gray-300 text-gray-900 rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 mb-4 outline-none">
-            <button onclick="sendDataToSheets()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-md">
-                Submit Record to Teacher
-            </button>
-            <p id="send-status" class="text-sm mt-4 font-medium h-5"></p>
+        <!-- Custom Message Box (Replaces alert) -->
+        <div id="message-dialog" class="dialog-box" style="z-index: 100;">
+            <h2 id="msg-title">Message</h2>
+            <p id="msg-text">Text goes here.</p>
+            <button onclick="closeMessage()">Continue</button>
         </div>
 
-        <!-- Mobile Controls Layout -->
-        <div id="mobile-controls" class="flex justify-between items-end w-full pointer-events-auto mb-4 px-2">
-            <!-- D-Pad -->
-            <div class="relative w-32 h-32">
-                <div class="mobile-btn absolute top-0 left-1/2 transform -translate-x-1/2 w-10 h-10" id="btn-up">W</div>
-                <div class="mobile-btn absolute bottom-0 left-1/2 transform -translate-x-1/2 w-10 h-10" id="btn-down">S</div>
-                <div class="mobile-btn absolute top-1/2 left-0 transform -translate-y-1/2 w-10 h-10" id="btn-left">A</div>
-                <div class="mobile-btn absolute top-1/2 right-0 transform -translate-y-1/2 w-10 h-10" id="btn-right">D</div>
-            </div>
-            <!-- Interact Button -->
-            <div class="mobile-btn w-16 h-16 text-xs text-center flex-col shadow-lg bg-green-500/50 border-green-300" id="action-btn">
-                Interact
-            </div>
+        <!-- End Dialog & Google Sheets Submission -->
+        <div id="end-dialog" class="dialog-box">
+            <h2>Mission Complete!</h2>
+            <p>Congratulations! You have completed the basic level.</p>
+            <input type="text" id="playerName" placeholder="Enter your name">
+            <button onclick="sendDataToSheets()">Submit Score to Teacher</button>
+            <p id="send-status" style="color: #666; font-size: 14px; margin-top: 10px; font-weight: bold;"></p>
+        </div>
+
+        <div id="mobile-controls">
+            <div class="d-pad" id="joystick">Move</div>
+            <div class="action-btn" id="action-btn">Interact</div>
         </div>
     </div>
 
 <script>
     // --- GOOGLE APPS SCRIPT CONFIGURATION ---
-    const APPS_SCRIPT_URL = https://script.google.com/macros/s/AKfycbwZI0pmmdLCGImBBljmipFKNZSdH6LRqpF29SnnNQyOiDlvXW1t9taaMTlPdNDiH9SRVQ/exec";
+    // Paste your Web App URL here after deploying the Apps Script
+    const APPS_SCRIPT_URL = "INSERT_YOUR_WEB_APP_URL_HERE";
 
     // --- GAME VARIABLES ---
     let scene, camera, renderer;
@@ -149,15 +205,12 @@
     let raycaster = new THREE.Raycaster();
     let cameraDirection = new THREE.Vector3();
     
-    // Status Pemain (Player Status)
+    // Player Status
     let score = 0;
     let currentLevel = 1;
     let isDialogActive = false;
     let targetObject = null;
-
-    // Mobile Look controls
-    let touchX = 0, touchY = 0;
-    let isTouchingScreen = false;
+    let messageCallback = null;
 
     init();
     animate();
@@ -165,200 +218,139 @@
     function init() {
         const container = document.getElementById('game-container');
 
-        // Scene setup
+        // Scene & Camera
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 10, 50);
+        scene.background = new THREE.Color(0x87CEEB); // Sky color
+        scene.fog = new THREE.Fog(0x87CEEB, 0, 50);
 
-        // Camera setup
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.y = 1.6; // Average eye height
+        camera.position.y = 1.6; // Player eye level
 
         // Lighting
-        const ambientLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
-        ambientLight.position.set(0, 20, 0);
-        scene.add(ambientLight);
+        const light = new THREE.HemisphereLight(0xeeeeff, 0x777788, 0.75);
+        light.position.set(0.5, 1, 0.75);
+        scene.add(light);
         
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
         dirLight.position.set(10, 20, 10);
-        dirLight.castShadow = true;
         scene.add(dirLight);
 
-        // Floor / Ground
+        // Floor Geometry
         const floorGeometry = new THREE.PlaneGeometry(100, 100);
-        const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x4a7c2c });
+        const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x556B2F });
         const floor = new THREE.Mesh(floorGeometry, floorMaterial);
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // Build simple maze environment
-        buildEnvironment();
+        // Build Maze Walls
+        buildMaze();
 
-        // Target Object (Producer - Plant)
-        createProducerObject();
+        // Interactive Object (Level 1: Producer - Plant/Green Cube)
+        const plantGeo = new THREE.BoxGeometry(1.2, 1.5, 1.2);
+        const plantMat = new THREE.MeshLambertMaterial({ color: 0x228B22 }); // Forest Green
+        const plant = new THREE.Mesh(plantGeo, plantMat);
+        plant.position.set(0, 0.75, -6);
+        plant.userData = { type: 'producer', isInteractive: true };
+        scene.add(plant);
+        interactableObjects.push(plant);
 
-        // Renderer
+        // Renderer Setup
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
         container.appendChild(renderer.domElement);
 
-        // Desktop Event Listeners
+        // Desktop Controls Events
         document.addEventListener('keydown', onKeyDown);
         document.addEventListener('keyup', onKeyUp);
         
-        // Mouse Look (Pointer Lock)
+        // Simple Mouse Look (Pointer Lock)
         container.addEventListener('click', () => {
-            if (!isDialogActive && window.innerWidth > 768) {
+            if (!isDialogActive) {
                 document.body.requestPointerLock();
             }
         });
         document.addEventListener('mousemove', onMouseMove);
         window.addEventListener('resize', onWindowResize);
         
-        // Mobile Event Listeners
-        setupMobileControls();
+        // Mobile Touch Events
+        document.getElementById('action-btn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            attemptInteraction();
+        });
+        
+        // Mobile movement simulation (simplified for testing)
+        document.getElementById('joystick').addEventListener('touchstart', (e) => { e.preventDefault(); moveForward = true; });
+        document.getElementById('joystick').addEventListener('touchend', (e) => { e.preventDefault(); moveForward = false; });
     }
 
-    function buildEnvironment() {
-        const wallMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 }); // Brown walls
+    function buildMaze() {
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 }); // Saddle Brown
+        const wallGeo = new THREE.BoxGeometry(12, 3, 1);
         
-        // Helper function to create walls
-        function createWall(w, h, d, x, y, z) {
-            const wallGeo = new THREE.BoxGeometry(w, h, d);
-            const wall = new THREE.Mesh(wallGeo, wallMat);
-            wall.position.set(x, y, z);
-            scene.add(wall);
-        }
-
-        // Create a simple enclosure/maze
-        createWall(20, 4, 1, 0, 2, -15);  // North wall
-        createWall(20, 4, 1, 0, 2, 5);    // South wall
-        createWall(1, 4, 20, -10, 2, -5); // West wall
-        createWall(1, 4, 20, 10, 2, -5);  // East wall
-        
-        // Some inner obstacles
-        createWall(6, 3, 1, -4, 1.5, -5);
-        createWall(1, 3, 6, 4, 1.5, -8);
-    }
-
-    function createProducerObject() {
-        // Create a stylized green plant (Producer)
-        const plantGroup = new THREE.Group();
-        
-        // Stem
-        const stemGeo = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
-        const stemMat = new THREE.MeshLambertMaterial({ color: 0x228B22 });
-        const stem = new THREE.Mesh(stemGeo, stemMat);
-        stem.position.y = 0.5;
-        plantGroup.add(stem);
-
-        // Leaves
-        const leafGeo = new THREE.ConeGeometry(0.5, 1, 4);
-        const leafMat = new THREE.MeshLambertMaterial({ color: 0x32CD32 });
-        const leaf = new THREE.Mesh(leafGeo, leafMat);
-        leaf.position.y = 1;
-        plantGroup.add(leaf);
-
-        plantGroup.position.set(2, 0, -10);
-        
-        // Invisible hit box for raycasting interaction
-        const hitBoxGeo = new THREE.BoxGeometry(1.5, 2, 1.5);
-        const hitBoxMat = new THREE.MeshBasicMaterial({ visible: false });
-        const hitBox = new THREE.Mesh(hitBoxGeo, hitBoxMat);
-        hitBox.position.set(2, 1, -10);
-        hitBox.userData = { type: 'producer', isInteractive: true };
-        
-        scene.add(plantGroup);
-        scene.add(hitBox);
-        interactableObjects.push(hitBox);
-
-        // Add a small spotlight to highlight it
-        const spotLight = new THREE.SpotLight(0xffffff, 1);
-        spotLight.position.set(2, 5, -10);
-        spotLight.target = plantGroup;
-        spotLight.angle = Math.PI/6;
-        scene.add(spotLight);
+        // Back wall to provide structure
+        const wall1 = new THREE.Mesh(wallGeo, wallMat);
+        wall1.position.set(0, 1.5, -10);
+        scene.add(wall1);
     }
 
     function onKeyDown(event) {
         if(isDialogActive) return;
         switch (event.code) {
-            case 'ArrowUp': case 'KeyW': moveForward = true; break;
-            case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
-            case 'ArrowDown': case 'KeyS': moveBackward = true; break;
-            case 'ArrowRight': case 'KeyD': moveRight = true; break;
+            case 'ArrowUp':
+            case 'KeyW': moveForward = true; break;
+            case 'ArrowLeft':
+            case 'KeyA': moveLeft = true; break;
+            case 'ArrowDown':
+            case 'KeyS': moveBackward = true; break;
+            case 'ArrowRight':
+            case 'KeyD': moveRight = true; break;
             case 'KeyE': attemptInteraction(); break;
         }
     }
 
     function onKeyUp(event) {
         switch (event.code) {
-            case 'ArrowUp': case 'KeyW': moveForward = false; break;
-            case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
-            case 'ArrowDown': case 'KeyS': moveBackward = false; break;
-            case 'ArrowRight': case 'KeyD': moveRight = false; break;
+            case 'ArrowUp':
+            case 'KeyW': moveForward = false; break;
+            case 'ArrowLeft':
+            case 'KeyA': moveLeft = false; break;
+            case 'ArrowDown':
+            case 'KeyS': moveBackward = false; break;
+            case 'ArrowRight':
+            case 'KeyD': moveRight = false; break;
         }
     }
 
     function onMouseMove(event) {
         if (document.pointerLockElement === document.body && !isDialogActive) {
             camera.rotation.y -= event.movementX * 0.002;
+            // Limit vertical rotation (look up/down)
             let pitch = camera.rotation.x - event.movementY * 0.002;
             camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
             camera.rotation.order = "YXZ";
         }
     }
 
-    function setupMobileControls() {
-        // Mobile Look (Swipe on screen)
-        const uiLayer = document.getElementById('ui-layer');
+    // Custom Message Box Logic (Replaces Alert)
+    function showMessage(title, text, callback) {
+        isDialogActive = true;
+        document.exitPointerLock();
         
-        uiLayer.addEventListener('touchstart', (e) => {
-            if(isDialogActive) return;
-            // Ignore touch if hitting a button
-            if(e.target.classList.contains('mobile-btn') || e.target.closest('#objective-panel')) return;
-            
-            if(e.touches.length === 1) {
-                touchX = e.touches[0].pageX;
-                touchY = e.touches[0].pageY;
-                isTouchingScreen = true;
-            }
-        });
-
-        uiLayer.addEventListener('touchmove', (e) => {
-            if(isDialogActive || !isTouchingScreen) return;
-            
-            if(e.touches.length === 1) {
-                let deltaX = e.touches[0].pageX - touchX;
-                let deltaY = e.touches[0].pageY - touchY;
-                
-                camera.rotation.y -= deltaX * 0.005;
-                let pitch = camera.rotation.x - deltaY * 0.005;
-                camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
-                camera.rotation.order = "YXZ";
-                
-                touchX = e.touches[0].pageX;
-                touchY = e.touches[0].pageY;
-            }
-        });
-
-        uiLayer.addEventListener('touchend', () => { isTouchingScreen = false; });
-
-        // D-Pad and Action Buttons
-        const bindTouch = (id, actionDown, actionUp) => {
-            const el = document.getElementById(id);
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); actionDown(); });
-            el.addEventListener('touchend', (e) => { e.preventDefault(); actionUp(); });
-        };
-
-        bindTouch('btn-up', () => moveForward = true, () => moveForward = false);
-        bindTouch('btn-down', () => moveBackward = true, () => moveBackward = false);
-        bindTouch('btn-left', () => moveLeft = true, () => moveLeft = false);
-        bindTouch('btn-right', () => moveRight = true, () => moveRight = false);
+        document.getElementById('msg-title').innerText = title;
+        document.getElementById('msg-text').innerText = text;
+        document.getElementById('message-dialog').style.display = 'block';
         
-        const actionBtn = document.getElementById('action-btn');
-        actionBtn.addEventListener('touchstart', (e) => { e.preventDefault(); attemptInteraction(); });
+        messageCallback = callback;
+    }
+
+    window.closeMessage = function() {
+        document.getElementById('message-dialog').style.display = 'none';
+        if (messageCallback) {
+            messageCallback();
+        } else {
+            isDialogActive = false;
+        }
     }
 
     function attemptInteraction() {
@@ -366,33 +358,9 @@
         
         if (targetObject.userData.type === 'producer' && currentLevel === 1) {
             isDialogActive = true;
-            if (document.pointerLockElement) document.exitPointerLock();
-            
-            // Show question
+            document.exitPointerLock();
             document.getElementById('question-dialog').style.display = 'block';
-            document.getElementById('question-dialog').classList.add('animate-fade-in');
         }
-    }
-
-    // Custom UI Notification replacing window.alert()
-    function showNotification(message, type = 'success') {
-        const toast = document.getElementById('notification-toast');
-        const text = document.getElementById('notification-text');
-        
-        text.innerText = message;
-        
-        if (type === 'success') {
-            toast.className = "absolute top-6 left-1/2 transform -translate-x-1/2 bg-white px-6 py-3 rounded-xl shadow-2xl transition-opacity duration-300 z-50 pointer-events-none border-l-4 border-green-500 opacity-100";
-            text.className = "font-bold text-green-700 text-center";
-        } else {
-            toast.className = "absolute top-6 left-1/2 transform -translate-x-1/2 bg-white px-6 py-3 rounded-xl shadow-2xl transition-opacity duration-300 z-50 pointer-events-none border-l-4 border-red-500 opacity-100";
-            text.className = "font-bold text-red-700 text-center";
-        }
-
-        // Hide after 3.5 seconds
-        setTimeout(() => {
-            toast.style.opacity = '0';
-        }, 3500);
     }
 
     // Learning Logic Function
@@ -400,56 +368,44 @@
         document.getElementById('question-dialog').style.display = 'none';
         
         if (isCorrect) {
-            showNotification("Exactly! Plants make their own food through photosynthesis.", "success");
-            score += 10;
-            
-            // Animate score update
-            const scoreEl = document.getElementById('score-display');
-            scoreEl.innerText = score;
-            scoreEl.classList.add('text-green-500', 'scale-125');
-            setTimeout(() => scoreEl.classList.remove('text-green-500', 'scale-125'), 500);
-            
-            document.getElementById('objective-text').innerText = "Level 1 Complete! Excellent job finding the Producer.";
-            currentLevel++;
-            
-            // Remove the plant from being interactable again
-            interactableObjects = [];
-            targetObject = null;
-            document.getElementById('interaction-prompt').style.display = 'none';
-
-            // Show End Screen after short delay
-            setTimeout(() => {
-                document.getElementById('end-dialog').style.display = 'block';
-            }, 2000);
+            showMessage("Correct!", "Exactly! Plants are producers. They make their own food through photosynthesis using sunlight.", () => {
+                score += 10;
+                document.getElementById('score-display').innerText = score;
+                document.getElementById('objective-text').innerHTML = "<strong>Status:</strong> Level 1 Complete!<br>Waiting for Level 2...";
+                currentLevel++;
+                
+                // Show End Screen for this test phase
+                setTimeout(() => {
+                    isDialogActive = true;
+                    document.getElementById('end-dialog').style.display = 'block';
+                }, 500);
+            });
         } else {
-            showNotification("Try again! Remember, green plants use sunlight to make food.", "error");
-            // Allow retry
-            setTimeout(() => {
-                isDialogActive = false; 
-            }, 1000);
-            return;
+            showMessage("Try Again", "Not quite. Remember, green plants use sunlight to make their own food. They do not eat other organisms.", () => {
+                isDialogActive = false; // Release lock so they can try again
+            });
         }
     };
 
     // Google Sheets Apps Script Function
     window.sendDataToSheets = function() {
-        const playerName = document.getElementById('playerName').value.trim();
+        const playerName = document.getElementById('playerName').value;
         const statusText = document.getElementById('send-status');
         
         if(!playerName) {
             statusText.innerText = "Please enter your name first.";
-            statusText.className = "text-sm mt-4 font-bold text-red-600 h-5";
+            statusText.style.color = "red";
             return;
         }
 
-        if(APPS_SCRIPT_URL.includes("INSERT_YOUR_WEB_APP_URL")) {
-            statusText.innerText = "Demo Mode: No backend URL configured. Data not saved.";
-            statusText.className = "text-sm mt-4 font-bold text-orange-600 h-5";
+        if(APPS_SCRIPT_URL === "INSERT_YOUR_WEB_APP_URL_HERE") {
+            statusText.innerText = "Error: APPS_SCRIPT_URL is not configured yet!";
+            statusText.style.color = "red";
             return;
         }
 
-        statusText.innerText = "Sending data...";
-        statusText.className = "text-sm mt-4 font-bold text-blue-600 h-5";
+        statusText.innerText = "Sending data securely to teacher...";
+        statusText.style.color = "#333";
 
         const data = {
             name: playerName,
@@ -460,21 +416,18 @@
 
         fetch(APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Important for G-Apps Script
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors', // Essential for Google Apps Script to bypass CORS policy
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(data)
         }).then(() => {
-            statusText.innerText = "Successfully sent to Teacher!";
-            statusText.className = "text-sm mt-4 font-bold text-green-600 h-5";
-            
-            // Hide dialog after success
-            setTimeout(() => {
-                document.getElementById('end-dialog').style.display = 'none';
-                isDialogActive = false;
-            }, 3000);
+            // Because of 'no-cors', we can't read the exact response, but a resolution means it fired.
+            statusText.innerText = "Success! Data sent to the Teacher's log.";
+            statusText.style.color = "green";
         }).catch(error => {
-            statusText.innerText = "Error: Network issue.";
-            statusText.className = "text-sm mt-4 font-bold text-red-600 h-5";
+            statusText.innerText = "Network Error: Could not reach the server.";
+            statusText.style.color = "red";
         });
     }
 
@@ -491,36 +444,31 @@
         const delta = (time - prevTime) / 1000;
 
         if (!isDialogActive) {
-            // Player Physics / Movement
+            // Player Movement Physics
             velocity.x -= velocity.x * 10.0 * delta;
             velocity.z -= velocity.z * 10.0 * delta;
 
             direction.z = Number(moveForward) - Number(moveBackward);
             direction.x = Number(moveRight) - Number(moveLeft);
-            direction.normalize();
+            direction.normalize(); // Ensure consistent diagonal movement speed
 
-            const speed = 40.0;
-            if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
-            if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+            if (moveForward || moveBackward) velocity.z -= direction.z * 40.0 * delta;
+            if (moveLeft || moveRight) velocity.x -= direction.x * 40.0 * delta;
 
-            // Collision boundary limits (simple hardcoded walls to keep player inside)
-            const nextX = camera.position.x - velocity.x * delta;
-            const nextZ = camera.position.z + velocity.z * delta;
-            
-            // Very simple boundary constraints based on the maze built
-            if(nextX > -9 && nextX < 9) camera.translateX(-velocity.x * delta);
-            if(nextZ > -14 && nextZ < 4) camera.translateZ(velocity.z * delta);
+            camera.translateX(-velocity.x * delta);
+            camera.translateZ(velocity.z * delta);
 
-            camera.position.y = 1.6; // Keep at eye level
+            // Keep camera at player height
+            camera.position.y = 1.6;
 
-            // Raycasting for Interaction
+            // Raycaster for detecting interactive objects (crosshair)
             camera.getWorldDirection(cameraDirection);
             raycaster.set(camera.position, cameraDirection);
             
             const intersects = raycaster.intersectObjects(interactableObjects);
             const promptUI = document.getElementById('interaction-prompt');
             
-            if (intersects.length > 0 && intersects[0].distance < 3.5) {
+            if (intersects.length > 0 && intersects[0].distance < 4) {
                 targetObject = intersects[0].object;
                 promptUI.style.display = 'block';
             } else {
